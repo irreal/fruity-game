@@ -4,7 +4,11 @@ export default class Demo extends Phaser.Scene {
   spawnSizes = [0.1, 0.2, 0.27, 0.31, 0.38];
   sizes = [0.1, 0.2, 0.27, 0.31, 0.38, 0.5, 0.55, 0.66, 0.72, 0.86, 1];
   nextSize = 0.1;
+  currentSize = 0.1;
   ghostBall: Phaser.GameObjects.Image;
+  nextBall: Phaser.GameObjects.Image;
+  ballCount = 0;
+
   constructor() {
     super("fruity");
   }
@@ -13,6 +17,7 @@ export default class Demo extends Phaser.Scene {
     for (let i = 1; i <= 11; i++) {
       this.load.image("fruit" + i, `assets/fruit${12 - i}.png`);
     }
+    this.load.image("fruitbasket", `assets/fruitbasket.png`);
   }
 
   createBall(x: number, y: number, size: number): Phaser.Physics.Matter.Image {
@@ -28,26 +33,46 @@ export default class Demo extends Phaser.Scene {
   }
 
   create() {
+    this.add.image(0, -290, "fruitbasket").setOrigin(0, 0).setScale(0.55);
     this.nextSize = Phaser.Math.RND.pick(this.spawnSizes);
-    const index = this.sizes.indexOf(this.nextSize);
+    this.currentSize = Phaser.Math.RND.pick(this.spawnSizes);
+
+    const index = this.sizes.indexOf(this.currentSize);
     this.ghostBall = this.add.image(0, 0, "fruit" + (index + 1));
-    this.ghostBall.setAlpha(0.4);
+    this.ghostBall.setAlpha(0);
+
+    const nextIndex = this.sizes.indexOf(this.nextSize);
+    this.nextBall = this.add.image(600, 100, "fruit" + (nextIndex + 1));
+
+    console.log("initial", index, nextIndex);
+
     this.input.addListener("pointermove", (pointer: Phaser.Input.Pointer) => {
       this.ghostBall.setPosition(pointer.x, 320);
     });
 
-    this.matter.world.setBounds(70, 450, 610, 800, 32, true, true, false, true);
+    this.matter.world.setBounds(50, 880, 670, 750, 32, true, true, false, true);
     for (let i = 0; i < 0; i++) {
       const x = Phaser.Math.Between(150, 1700);
       const y = Phaser.Math.Between(-600, 0);
       const size = Phaser.Math.RND.pick(this.spawnSizes);
       this.createBall(x, y, size);
     }
-    this.input.addListener("pointerup", (pointer: Phaser.Input.Pointer) => {
-      this.createBall(pointer.x, 320, this.nextSize);
+    this.input.addListener("pointerdown", (pointer: Phaser.Input.Pointer) => {
+      this.currentSize = this.nextSize;
       this.nextSize = Phaser.Math.RND.pick(this.spawnSizes);
-      const index = this.sizes.indexOf(this.nextSize);
-      this.ghostBall.setTexture("fruit" + (index + 1));
+      this.ghostBall.setTexture(
+        "fruit" + (this.sizes.indexOf(this.currentSize) + 1)
+      );
+      this.nextBall.setTexture(
+        "fruit" + (this.sizes.indexOf(this.nextSize) + 1)
+      );
+      this.ghostBall.setPosition(600, 100);
+      this.ghostBall.setPosition(pointer.x, 320);
+      this.ghostBall.setAlpha(1);
+    });
+    this.input.addListener("pointerup", (pointer: Phaser.Input.Pointer) => {
+      this.createBall(pointer.x, 320, this.currentSize);
+      this.ghostBall.setAlpha(0);
     });
 
     this.matter.world.on(
