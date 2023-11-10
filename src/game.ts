@@ -18,14 +18,12 @@ export default class Demo extends Phaser.Scene {
   createBall(x: number, y: number, size: number): Phaser.Physics.Matter.Image {
     const index = this.sizes.indexOf(size);
     const ball = this.matter.add.image(x, y, "fruit" + (index + 1));
-    ball.setCircle(180 * size, {
-      restitution: 0.02,
-      friction: 0.1,
-      density: 15,
-    });
+    ball.setCollisionCategory(index);
+    ball.setCircle(180 * size);
     ball.setFriction(0.005);
-    ball.setBounce(1);
+    ball.setBounce(0.6);
     ball.setData("size", size);
+
     return ball;
   }
 
@@ -52,23 +50,28 @@ export default class Demo extends Phaser.Scene {
       this.ghostBall.setTexture("fruit" + (index + 1));
     });
 
-    this.matter.world.on("collisionstart", (event, bodyA, bodyB) => {
-      if (bodyA.gameObject && bodyB.gameObject) {
-        const size1 = bodyA.gameObject.getData("size");
-        const size2 = bodyB.gameObject.getData("size");
-        if (size1 === size2 && size1 < 1) {
-          const newSize = this.sizes[this.sizes.indexOf(size1) + 1];
-          this.createBall(
-            (bodyA.position.x + bodyB.position.x) / 2,
-            (bodyA.position.y + bodyB.position.y) / 2,
-            newSize
-          );
+    this.matter.world.on(
+      "collisionstart",
+      (event: Phaser.Physics.Matter.Events.CollisionStartEvent) => {
+        event.pairs.forEach((pair) => {
+          if (pair.bodyA.gameObject && pair.bodyB.gameObject) {
+            const size1 = pair.bodyA.gameObject.getData("size");
+            const size2 = pair.bodyB.gameObject.getData("size");
+            if (size1 === size2 && size1 < 1) {
+              const newSize = this.sizes[this.sizes.indexOf(size1) + 1];
+              this.createBall(
+                (pair.bodyA.position.x + pair.bodyB.position.x) / 2,
+                (pair.bodyA.position.y + pair.bodyB.position.y) / 2,
+                newSize
+              );
 
-          bodyA.gameObject.destroy();
-          bodyB.gameObject.destroy();
-        }
+              pair.bodyA.gameObject.destroy();
+              pair.bodyB.gameObject.destroy();
+            }
+          }
+        });
       }
-    });
+    );
   }
 }
 
