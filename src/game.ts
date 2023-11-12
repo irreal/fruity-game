@@ -8,6 +8,7 @@ export default class Demo extends Phaser.Scene {
   ghostBall: Phaser.GameObjects.Image;
   nextBall: Phaser.GameObjects.Image;
   ballCount = 0;
+  startYPosition = 620;
 
   constructor() {
     super("fruity");
@@ -47,7 +48,7 @@ export default class Demo extends Phaser.Scene {
     console.log("initial", index, nextIndex);
 
     this.input.addListener("pointermove", (pointer: Phaser.Input.Pointer) => {
-      this.ghostBall.setPosition(pointer.x, 320);
+      this.ghostBall.setPosition(pointer.x, this.startYPosition);
     });
 
     this.matter.world.setBounds(50, 880, 670, 750, 32, true, true, false, true);
@@ -67,11 +68,11 @@ export default class Demo extends Phaser.Scene {
         "fruit" + (this.sizes.indexOf(this.nextSize) + 1)
       );
       this.ghostBall.setPosition(600, 100);
-      this.ghostBall.setPosition(pointer.x, 320);
+      this.ghostBall.setPosition(pointer.x, this.startYPosition);
       this.ghostBall.setAlpha(1);
     });
     this.input.addListener("pointerup", (pointer: Phaser.Input.Pointer) => {
-      this.createBall(pointer.x, 320, this.currentSize);
+      this.createBall(pointer.x, this.startYPosition, this.currentSize);
       this.ghostBall.setAlpha(0);
     });
 
