@@ -9,6 +9,8 @@ export default class Demo extends Phaser.Scene {
   nextBall: Phaser.GameObjects.Image;
   ballCount = 0;
   startYPosition = 620;
+  placementMode: "fall" | "place" = "fall";
+  pickingNextFruit = false;
 
   constructor() {
     super("fruity");
@@ -35,6 +37,24 @@ export default class Demo extends Phaser.Scene {
 
   create() {
     this.add.image(0, -290, "fruitbasket").setOrigin(0, 0).setScale(0.55);
+    const text = this.add.text(10, 10, "mode: " + this.placementMode, {
+      font: "40px Arial",
+      color: "white",
+    });
+    text.setInteractive(
+      new Phaser.Geom.Rectangle(0, 0, text.width, text.height),
+      Phaser.Geom.Rectangle.Contains
+    );
+    text.on("pointerdown", () => {
+      this.placementMode = this.placementMode === "fall" ? "place" : "fall";
+      text.setText("mode: " + this.placementMode);
+    });
+
+    let dropArea = this.add.graphics({ fillStyle: { color: 0x000000 } });
+    dropArea.setInteractive(
+      new Phaser.Geom.Rectangle(20, 600, 780, 1680),
+      Phaser.Geom.Rectangle.Contains
+    );
     this.nextSize = Phaser.Math.RND.pick(this.spawnSizes);
     this.currentSize = Phaser.Math.RND.pick(this.spawnSizes);
 
@@ -44,11 +64,37 @@ export default class Demo extends Phaser.Scene {
 
     const nextIndex = this.sizes.indexOf(this.nextSize);
     this.nextBall = this.add.image(600, 100, "fruit" + (nextIndex + 1));
+    this.nextBall.setInteractive();
+    const balls = [];
+    const scales = [1, 0.7, 0.6, 0.5, 0.4, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3];
+    for (let i = 0; i < this.sizes.length; i++) {
+      const index = i;
+      const ball = this.add
+        .image(30 + index * 60, 200, "fruit" + (index + 1))
+        .setInteractive()
+        .on("pointerdown", () => {
+          this.nextSize = this.sizes[index];
+          this.nextBall.setTexture("fruit" + (index + 1));
+        });
+      ball.setScale(scales[index]);
+      ball.setVisible(false);
+      balls.push(ball);
+    }
+    this.nextBall.on("pointerdown", () => {
+      this.pickingNextFruit = !this.pickingNextFruit;
+      for (let i = 0; i < balls.length; i++) {
+        const ball = balls[i];
+        ball.setVisible(this.pickingNextFruit);
+      }
+    });
 
     console.log("initial", index, nextIndex);
 
-    this.input.addListener("pointermove", (pointer: Phaser.Input.Pointer) => {
-      this.ghostBall.setPosition(pointer.x, this.startYPosition);
+    dropArea.on("pointermove", (pointer: Phaser.Input.Pointer) => {
+      this.ghostBall.setPosition(
+        pointer.x,
+        this.placementMode === "fall" ? this.startYPosition : pointer.y
+      );
     });
 
     this.matter.world.setBounds(50, 880, 670, 750, 32, true, true, false, true);
@@ -58,9 +104,12 @@ export default class Demo extends Phaser.Scene {
       const size = Phaser.Math.RND.pick(this.spawnSizes);
       this.createBall(x, y, size);
     }
-    this.input.addListener("pointerdown", (pointer: Phaser.Input.Pointer) => {
+    dropArea.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+      console.log(this.placementMode);
       this.currentSize = this.nextSize;
-      this.nextSize = Phaser.Math.RND.pick(this.spawnSizes);
+      if (!this.pickingNextFruit) {
+        this.nextSize = Phaser.Math.RND.pick(this.spawnSizes);
+      }
       this.ghostBall.setTexture(
         "fruit" + (this.sizes.indexOf(this.currentSize) + 1)
       );
@@ -68,11 +117,18 @@ export default class Demo extends Phaser.Scene {
         "fruit" + (this.sizes.indexOf(this.nextSize) + 1)
       );
       this.ghostBall.setPosition(600, 100);
-      this.ghostBall.setPosition(pointer.x, this.startYPosition);
+      this.ghostBall.setPosition(
+        pointer.x,
+        this.placementMode === "fall" ? this.startYPosition : pointer.y
+      );
       this.ghostBall.setAlpha(1);
     });
-    this.input.addListener("pointerup", (pointer: Phaser.Input.Pointer) => {
-      this.createBall(pointer.x, this.startYPosition, this.currentSize);
+    dropArea.on("pointerup", (pointer: Phaser.Input.Pointer) => {
+      this.createBall(
+        pointer.x,
+        this.placementMode === "fall" ? this.startYPosition : pointer.y,
+        this.currentSize
+      );
       this.ghostBall.setAlpha(0);
     });
 
